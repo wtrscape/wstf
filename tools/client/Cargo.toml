@@ -1,0 +1,14 @@
+[package]
+name = "client"
+version = "0.1.0"
+authors = ["alxshelepenok <alxshelepenok@gmail.com>"]
+repository = "https://github.com/wtrscape/wstf"
+description = "Command line client for WSTF Protocol"
+edition = "2018"
+
+[dependencies]
+clap = "2.33.0"
+wstf_parser = { path = "../../packages/wstf_parser", version = "0.1.0" }
+wstf_protocol = { path = "../../packages/wstf_protocol", version = "0.1.0" }
+wstf_algorithms = { path = "../../packages/wstf_algorithms", version = "0.1.0" }
+wstf_update = { path = "../../packages/wstf_update", version = "0.1.0" }

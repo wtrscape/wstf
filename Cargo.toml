@@ -1,0 +1,18 @@
+[workspace]
+
+members = [
+    "tools/concat",
+    "tools/client",
+    "tools/split",
+    "packages/wstf_update",
+    "packages/wstf_database",
+    "packages/wstf_parser",
+    "packages/wstf_protocol",
+    "packages/wstf_algorithms"
+]
+
+[profile.release]
+debug = true
+
+[profile.bench]
+debug = true

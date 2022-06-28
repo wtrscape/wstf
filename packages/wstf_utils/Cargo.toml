@@ -1,0 +1,13 @@
+[package]
+name = "wstf_utils"
+version = "0.1.0"
+authors = ["alxshelepenok <alxshelepenok@gmail.com>"]
+repository = "https://github.com/wtrscape/wstf"
+description = "A some utils for calculating different things"
+edition = "2018"
+
+[dependencies]
+chrono = "0.4.9"
+byteorder = "1.3.2"
+arrayvec = "0.5.1"
+wstf_update = { path = "../wstf_update", version = "0.1.0" }
