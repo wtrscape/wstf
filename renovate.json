@@ -2,12 +2,7 @@
   "extends": [
     "config:base",
     ":automergePatch",
-    ":automergeBranch",
-    ":automergePatch",
-    ":automergeBranch",
-    ":automergeLinters",
-    ":automergeTesters",
-    ":automergeTypes"
+    ":automergeBranch"
   ],
   "labels": ["renovate"],
   "prHourlyLimit": 4,
