@@ -41,7 +41,6 @@ jobs:
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
-        continue-on-error: true
         with:
           command: test
 
@@ -58,11 +57,10 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-          components: rustfmt, clippy
+          components: rustfmt
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
-        continue-on-error: true
         with:
           command: fmt
           args: --all -- --check
