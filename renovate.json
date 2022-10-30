@@ -1,0 +1,12 @@
+{
+  "extends": [
+    "config:base",
+    ":automergePatch",
+    ":automergeBranch"
+  ],
+  "labels": ["renovate"],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 16,
+  "rangeStrategy": "bump",
+  "semanticCommits": "enabled"
+}
