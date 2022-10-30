@@ -227,7 +227,14 @@ fn wstf_merging() {
         (1012, 1012.),
     ];
 
-    combine_files(filename_first, metadata_first, filename_second, metadata_second, filename_output).unwrap();
+    combine_files(
+        filename_first,
+        metadata_first,
+        filename_second,
+        metadata_second,
+        filename_output,
+    )
+    .unwrap();
     let merged_updates: Vec<Update> = decode(filename_output, None).unwrap();
 
     remove_file(filename_first).unwrap();

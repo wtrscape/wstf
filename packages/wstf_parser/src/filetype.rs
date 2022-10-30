@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use wstf_protocol::file_format::{append, encode, read_magic_value};
-use wstf_update::{Update};
+use wstf_update::Update;
 
 #[derive(Serialize)]
 pub enum FileType {

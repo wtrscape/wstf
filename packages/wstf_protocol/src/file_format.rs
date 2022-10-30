@@ -126,9 +126,9 @@ pub fn write_batches(mut wtr: &mut dyn Write, ups: &[Update]) -> Result<(), io::
     for elem in ups.iter() {
         if count != 0
             && (elem.ts >= ref_ts + 0xFFFF
-            || elem.seq >= ref_seq + 0xF
-            || elem.seq < ref_seq
-            || elem.ts < ref_ts)
+                || elem.seq >= ref_seq + 0xF
+                || elem.seq < ref_seq
+                || elem.ts < ref_ts)
         {
             write_reference(&mut wtr, ref_ts, ref_seq, count)?;
             let _ = wtr.write(buf.as_slice());

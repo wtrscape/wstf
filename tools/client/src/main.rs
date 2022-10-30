@@ -1,7 +1,7 @@
 use clap::{App, Arg};
 use wstf_parser::utils::{scan_files_for_range, total_folder_updates_len};
 use wstf_protocol::file_format::{decode, read_meta};
-use wstf_update::{UpdateVecConvert};
+use wstf_update::UpdateVecConvert;
 
 fn main() {
     let matches = App::new("client")
