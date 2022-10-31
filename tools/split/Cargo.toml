@@ -7,5 +7,5 @@ description = "A tiny library for splits big WSTF files into smaller ones"
 edition = "2018"
 
 [dependencies]
-clap = "2.33.0"
+clap = "2.34.0"
 wstf_protocol = { path = "../../packages/wstf_protocol", version = "0.1.0" }

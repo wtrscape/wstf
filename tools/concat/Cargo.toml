@@ -7,7 +7,7 @@ description = "Concatenates two WSTF files into a single output file."
 edition = "2018"
 
 [dependencies]
-clap = "2.33.0"
+clap = "2.34.0"
 serde_json = "1.0.40"
 wstf_protocol = { path = "../../packages/wstf_protocol", version = "0.1.0" }
 wstf_update = { path = "../../packages/wstf_update", version = "0.1.0" }
