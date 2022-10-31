@@ -10,4 +10,4 @@ edition = "2018"
 byteorder = "1.4.3"
 wstf_protocol = { path = "../wstf_protocol", version = "0.1.0" }
 wstf_update = { path = "../wstf_update", version = "0.1.0" }
-log = "0.4.8"
+log = "0.4.17"
