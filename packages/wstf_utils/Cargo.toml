@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 chrono = "0.4.9"
-byteorder = "1.3.2"
+byteorder = "1.4.3"
 arrayvec = "0.5.1"
 wstf_update = { path = "../wstf_update", version = "0.1.0" }
