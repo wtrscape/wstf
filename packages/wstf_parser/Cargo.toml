@@ -18,4 +18,4 @@ wstf_utils = { path = "../wstf_utils", version = "0.1.0" }
 
 [dependencies.uuid]
 features = ["serde", "v4"]
-version = "0.8.2"
+version = "1.2.1"
