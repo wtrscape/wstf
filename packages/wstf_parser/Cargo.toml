@@ -10,7 +10,7 @@ edition = "2018"
 csv = "1.1.6"
 serde = "1.0.147"
 libc = "0.2.137"
-serde_derive = "1.0.101"
+serde_derive = "1.0.147"
 serde_json = "1.0.40"
 wstf_protocol = { path = "../wstf_protocol", version = "0.1.0" }
 wstf_update = { path = "../wstf_update", version = "0.1.0" }
