@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 byteorder = "1.4.3"
-chrono = "0.4.22"
+chrono = "0.4.23"
 indexmap = "1.9.1"
 libc = "0.2.137"
 wstf_protocol = { path = "../wstf_protocol", version = "0.1.0" }
