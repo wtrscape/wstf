@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 csv = "1.1.6"
 serde = "1.0.148"
-libc = "0.2.137"
+libc = "0.2.138"
 serde_derive = "1.0.148"
 serde_json = "1.0.89"
 wstf_protocol = { path = "../wstf_protocol", version = "0.1.0" }
