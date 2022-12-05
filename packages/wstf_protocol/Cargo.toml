@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 bitflags = "1.3.2"
 byteorder = "1.4.3"
-serde = "1.0.148"
+serde = "1.0.149"
 serde_derive = "1.0.148"
 serde_json = "1.0.89"
 wstf_utils = { path = "../wstf_utils", version = "0.1.0" }
