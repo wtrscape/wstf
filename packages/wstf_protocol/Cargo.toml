@@ -16,4 +16,4 @@ wstf_utils = { path = "../wstf_utils", version = "0.1.0" }
 wstf_update = { path = "../wstf_update", version = "0.1.0" }
 
 [dev-dependencies]
-serial_test = "0.9.0"
+serial_test = "0.10.0"
