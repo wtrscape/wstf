@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 csv = "1.1.6"
-serde = "1.0.151"
+serde = "1.0.152"
 libc = "0.2.139"
 serde_derive = "1.0.151"
 serde_json = "1.0.91"
