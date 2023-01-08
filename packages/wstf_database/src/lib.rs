@@ -21,19 +21,19 @@ fn key_or_default(key: &str, default: &str) -> String {
     }
 }
 
-fn get_waterscape_conf_from_env() -> (String, String, usize) {
-    let waterscape_hostname: String = key_or_default("WATERSCAPEDB_HOSTNAME", "localhost");
-    let waterscape_port: String = key_or_default("WATERSCAPEDB_PORT", "9001");
+fn get_wstfdb_conf_from_env() -> (String, String, usize) {
+    let wstfdb_hostname: String = key_or_default("WSTFDB_HOSTNAME", "localhost");
+    let wstfdb_port: String = key_or_default("WSTFDB_PORT", "9001");
     let q_capacity: usize = key_or_default("QUEUE_CAPACITY", "70000000")
         .parse()
         .unwrap();
 
-    (waterscape_hostname, waterscape_port, q_capacity)
+    (wstfdb_hostname, wstfdb_port, q_capacity)
 }
 
 pub fn get_cxn() -> Cxn {
-    let (waterscape_hostname, waterscape_port, _capacity) = get_waterscape_conf_from_env();
-    match Cxn::new(&waterscape_hostname, &waterscape_port) {
+    let (wstfdb_hostname, wstfdb_port, _capacity) = get_wstfdb_conf_from_env();
+    match Cxn::new(&wstfdb_hostname, &wstfdb_port) {
         Ok(cxn) => cxn,
         Err(Error::ConnectionError) => {
             panic!("DB cannot be connected!");
@@ -43,9 +43,9 @@ pub fn get_cxn() -> Cxn {
 }
 
 pub fn get_cxn_pool() -> CxnPool {
-    let (waterscape_hostname, waterscape_port, capacity) = get_waterscape_conf_from_env();
+    let (wstfdb_hostname, wstfdb_port, capacity) = get_wstfdb_conf_from_env();
 
-    match CxnPool::new(1, &waterscape_hostname, &waterscape_port, capacity) {
+    match CxnPool::new(1, &wstfdb_hostname, &wstfdb_port, capacity) {
         Ok(pool) => pool,
         Err(Error::ConnectionError) => {
             panic!("Connection Pool cannot be established!");
