@@ -1,7 +1,7 @@
-use libc::{c_char, c_uchar};
+use super::filetype::parse_kaiko_csv_to_wstf_inner;
 use crate::protocol::file_format::{decode, decode_buffer};
 use crate::update::{Update, UpdateVecConvert};
-use super::filetype::{parse_kaiko_csv_to_wstf_inner};
+use libc::{c_char, c_uchar};
 
 use std::ffi::{CStr, CString};
 use std::{mem, ptr, slice};

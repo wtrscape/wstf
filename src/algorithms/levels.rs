@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use super::histogram::{BinCount, Histogram};
-use std::collections::{BTreeMap, HashMap};
 use crate::update::Update;
 use crate::utils::fill_digits;
+use std::collections::{BTreeMap, HashMap};
 
 type Price = u64;
 type Time = u32;

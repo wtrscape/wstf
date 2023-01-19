@@ -1,9 +1,9 @@
+use crate::protocol::file_format::{append, encode, read_magic_value};
+use crate::update::Update;
 use csv::{DeserializeRecordsIntoIter, ReaderBuilder};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use crate::protocol::file_format::{append, encode, read_magic_value};
-use crate::update::Update;
 
 #[derive(Serialize)]
 pub enum FileType {

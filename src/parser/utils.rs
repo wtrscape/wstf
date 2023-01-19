@@ -1,7 +1,7 @@
-use std::{fs, io};
 use crate::protocol::file_format::{get_range_in_file, read_meta};
 use crate::update::Update;
 use crate::utils::within_range;
+use std::{fs, io};
 
 pub fn scan_files_for_range(
     folder: &str,

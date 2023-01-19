@@ -1,7 +1,7 @@
 use super::histogram::{BinCount, Histogram};
+use crate::update::Update;
 use indexmap::IndexMap;
 use std::{f64, fmt};
-use crate::update::Update;
 
 type PriceBits = u64;
 type Size = f32;

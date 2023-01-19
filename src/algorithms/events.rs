@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use crate::update::Update;
+use std::collections::BTreeMap;
 
 type Time = u64;
 

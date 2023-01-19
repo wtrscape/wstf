@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
+use crate::update::Update;
+use crate::utils::{bigram, fill_digits};
 use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::collections::HashMap;
 use std::mem;
-use crate::update::Update;
-use crate::utils::{bigram, fill_digits};
 
 type Price = f64;
 pub type BinCount = usize;

@@ -1,9 +1,9 @@
 use super::{file_metadata::FileMetadata, filetype::FileType};
-use std::{env, fs, io, str::FromStr};
 use crate::protocol::{
     file_format::{read_meta, Metadata},
     symbol::{AssetType, Symbol},
 };
+use std::{env, fs, io, str::FromStr};
 
 fn key_or_default(key: &str, default: &str) -> String {
     match env::var(key) {
