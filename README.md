@@ -1,15 +1,6 @@
-<h1 align="center">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./documents/images/logo_white.svg#gh-dark-mode-only" width="100px">
-      <img src="./documents/images/logo_black.svg#gh-light-mode-only" width="100px">
-    </picture>
-    <br>
-    WSTF
-</h1>
+# wstf
 
-<h4 align="center">
-  Rust implementation of the WSTF protocol.
-</h4>
+Rust implementation of the WSTF protocol.
 
 ## License
 
