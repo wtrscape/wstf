@@ -1,5 +1,9 @@
 <h1 align="center">
-    <img alt="waterscape" title="waterscape" src="https://github.com/wtrscape/wstf/blob/main/documents/images/logo.svg#gh-light-mode-only" width="100"> <br>
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./documents/images/logo_black.svg#gh-dark-mode-only">
+      <img src="./documents/images/logo_white.svg#gh-light-mode-only">
+    </picture>
+    <br>
     WSTF
 </h1>
 
