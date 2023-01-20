@@ -1,7 +1,7 @@
 <h1 align="center">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./documents/images/logo_black.svg#gh-dark-mode-only">
-      <img src="./documents/images/logo_white.svg#gh-light-mode-only">
+      <source media="(prefers-color-scheme: dark)" srcset="./documents/images/logo_white.svg#gh-dark-mode-only" width="100px">
+      <img src="./documents/images/logo_black.svg#gh-light-mode-only" width="100px">
     </picture>
     <br>
     WSTF
