@@ -1,5 +1,5 @@
 <h1 align="center">
-    <img alt="waterscape" title="waterscape" src="https://github.com/wtrscape/wstf/blob/refactor/lib/documents/images/logo.svg" width="100"> <br>
+    <img alt="waterscape" title="waterscape" src="https://github.com/wtrscape/wstf/blob/main/documents/images/logo.svg#gh-light-mode-only" width="100"> <br>
     WSTF
 </h1>
 
