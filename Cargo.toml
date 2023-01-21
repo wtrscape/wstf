@@ -1,6 +1,6 @@
 [package]
 name = "wstf"
-version = "0.1.1"
+version = "2.0.0"
 authors = ["alxshelepenok <alxshelepenok@gmail.com>"]
 repository = "https://github.com/wtrscape/wstf"
 description = "Rust implementation of the WSTF (Waterscape Tick Format) protocol"
