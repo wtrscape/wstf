@@ -23,7 +23,7 @@ name = "wstf_split"
 path = "internal/tools/split.rs"
 
 [dependencies]
-clap = "2.34.0"
+clap = "4.1.1"
 chrono = "0.4.23"
 byteorder = "1.4.3"
 arrayvec = "0.7.2"
