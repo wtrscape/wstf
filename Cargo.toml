@@ -1,18 +1,44 @@
-[workspace]
+[package]
+name = "wstf"
+version = "0.1.1"
+authors = ["alxshelepenok <alxshelepenok@gmail.com>"]
+repository = "https://github.com/wtrscape/wstf"
+description = "Rust implementation of the WSTF (Waterscape Tick Format) protocol"
+edition = "2018"
 
-members = [
-  "tools/concat",
-  "tools/client",
-  "tools/split",
-  "packages/wstf_update",
-  "packages/wstf_database",
-  "packages/wstf_parser",
-  "packages/wstf_protocol",
-  "packages/wstf_algorithms"
-]
+[lib]
+name = "wstf"
+path = "src/lib.rs"
 
-[profile.release]
-debug = true
+[[bin]]
+name = "wstf_client"
+path = "internal/tools/client.rs"
 
-[profile.bench]
-debug = true
+[[bin]]
+name = "wstf_concat"
+path = "internal/tools/concat.rs"
+
+[[bin]]
+name = "wstf_split"
+path = "internal/tools/split.rs"
+
+[dependencies]
+clap = "2.34.0"
+chrono = "0.4.23"
+byteorder = "1.4.3"
+arrayvec = "0.7.2"
+bitflags = "1.3.2"
+serde = "1.0.152"
+serde_derive = "1.0.152"
+serde_json = "1.0.91"
+indexmap = "1.9.2"
+libc = "0.2.139"
+log = "0.4.17"
+csv = "1.1.6"
+
+[dependencies.uuid]
+features = ["serde", "v4"]
+version = "1.2.2"
+
+[dev-dependencies]
+serial_test = "1.0.0"

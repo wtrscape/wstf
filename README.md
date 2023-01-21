@@ -1,11 +1,6 @@
-<h1 align="center">
-    <img alt="waterscape" title="waterscape" src="https://github.com/wtrscape/wstf/blob/main/documents/images/logo.svg" width="100"> <br>
-    WSTF
-</h1>
+# wstf
 
-<h4 align="center">
-  Rust implementation of the WSTF protocol.
-</h4>
+Rust implementation of the WSTF protocol.
 
 ## License
 
