@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
-use crate::update::Update;
-use crate::utils::{bigram, fill_digits};
+use std::mem;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
 use std::collections::HashMap;
-use std::mem;
+use crate::update::Update;
+use crate::utils::{bigram, fill_digits};
 
 type Price = f64;
 pub type BinCount = usize;
@@ -82,16 +82,11 @@ fn reject_outliers(prices: &[Price], m: f64) -> Vec<Price> {
         .iter()
         .map(|p| {
             let v = p - median;
-            if v > 0. {
-                v
-            } else {
-                -v
-            }
+            if v > 0. { v } else { -v }
         })
         .collect::<Vec<f64>>();
     let mdev = d.median();
-    let s = d
-        .iter()
+    let s = d.iter()
         .map(|a| if mdev > 0. { a / mdev } else { 0. })
         .collect::<Vec<f64>>();
     let filtered = prices

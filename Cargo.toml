@@ -12,15 +12,15 @@ name = "wstf"
 path = "src/lib.rs"
 
 [[bin]]
-name = "wstf_client"
+name = "wstf-client"
 path = "internal/tools/client.rs"
 
 [[bin]]
-name = "wstf_concat"
+name = "wstf-concat"
 path = "internal/tools/concat.rs"
 
 [[bin]]
-name = "wstf_split"
+name = "wstf-split"
 path = "internal/tools/split.rs"
 
 [dependencies]
