@@ -1,4 +1,9 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::cell::RefCell;
+use std::io::Cursor;
+use std::iter::Peekable;
+use std::ops::DerefMut;
+use std::sync::Mutex;
 use std::{
     cmp, fmt,
     fs::{File, OpenOptions},
@@ -84,20 +89,17 @@ fn write_symbol(wtr: &mut dyn Write, symbol: &str) -> Result<usize, io::Error> {
     wtr.write(padded_symbol.as_bytes())
 }
 
-fn write_len<T: Write + Seek>(wtr: &mut BufWriter<T>, len: u64) -> Result<(), io::Error> {
+fn write_len<T: Write + Seek>(wtr: &mut T, len: u64) -> Result<(), io::Error> {
     let _ = wtr.seek(SeekFrom::Start(LEN_OFFSET));
     wtr.write_u64::<BigEndian>(len)
 }
 
-fn write_max_ts<T: Write + Seek>(wtr: &mut BufWriter<T>, max_ts: u64) -> Result<(), io::Error> {
+fn write_max_ts<T: Write + Seek>(wtr: &mut T, max_ts: u64) -> Result<(), io::Error> {
     let _ = wtr.seek(SeekFrom::Start(MAX_TS_OFFSET));
     wtr.write_u64::<BigEndian>(max_ts)
 }
 
-fn write_metadata<T: Write + Seek>(
-    wtr: &mut BufWriter<T>,
-    ups: &[Update],
-) -> Result<(), io::Error> {
+fn write_metadata<T: Write + Seek>(wtr: &mut T, ups: &[Update]) -> Result<(), io::Error> {
     write_len(wtr, ups.len() as u64)?;
     write_max_ts(wtr, get_max_ts_sorted(ups))
 }
@@ -114,56 +116,76 @@ fn write_reference(
     wtr.write_u16::<BigEndian>(len)
 }
 
-pub fn write_batches(mut wtr: &mut dyn Write, ups: &[Update]) -> Result<(), io::Error> {
-    if ups.len() == 0 {
-        return Ok(());
+use std::ops::Deref;
+#[cfg_attr(feature = "count_alloc", count_alloc)]
+pub fn write_batches<U: Deref<Target = Update>, I: Iterator<Item = U>>(
+    mut wtr: &mut dyn Write,
+    mut ups: Peekable<I>,
+) -> Result<(), io::Error> {
+    lazy_static! {
+        static ref BUF: Mutex<RefCell<Vec<u8>>> = Mutex::new(RefCell::new(vec![0; 100_000_000]));
     }
-    let mut buf: Vec<u8> = vec![];
-    let mut ref_ts = ups[0].ts;
-    let mut ref_seq = ups[0].seq;
-    let mut count = 0;
+    let mut b = BUF.lock().unwrap();
+    let mut c = b.deref_mut().borrow_mut();
+    let mut buf = Cursor::new(&mut c[..]);
+    let head = ups.peek().unwrap();
+    let mut ref_ts = head.ts;
+    let mut ref_seq = head.seq;
+    let mut count: u16 = 0;
 
-    for elem in ups.iter() {
+    for elem in ups {
         if count != 0
             && (elem.ts >= ref_ts + 0xFFFF
                 || elem.seq >= ref_seq + 0xF
                 || elem.seq < ref_seq
-                || elem.ts < ref_ts)
+                || elem.ts < ref_ts
+                || count == 0xFFFF)
         {
             write_reference(&mut wtr, ref_ts, ref_seq, count)?;
-            let _ = wtr.write(buf.as_slice());
-            buf.clear();
+            let _ = wtr.write(&buf.get_ref()[0..(buf.position() as usize)]);
+            buf.set_position(0);
 
             ref_ts = elem.ts;
             ref_seq = elem.seq;
             count = 0;
         }
 
-        let serialized = elem.serialize(ref_ts, ref_seq);
-        let _ = buf.write(serialized.as_slice());
+        elem.serialize_to_buffer(&mut buf, ref_ts, ref_seq);
 
         count += 1;
     }
 
     write_reference(&mut wtr, ref_ts, ref_seq, count)?;
-    wtr.write_all(buf.as_slice())
+    wtr.write_all(&buf.get_ref()[0..(buf.position() as usize)])
 }
 
-fn write_main<T: Write + Seek>(wtr: &mut BufWriter<T>, ups: &[Update]) -> Result<(), io::Error> {
+pub fn write_main<'a, D: Deref<Target = Update>, T: Write + Seek, I: Iterator<Item = D>>(
+    wtr: &mut T,
+    ups: Peekable<I>,
+) -> Result<(), io::Error> {
     wtr.seek(SeekFrom::Start(MAIN_OFFSET))?;
-    if !ups.is_empty() {
-        write_batches(wtr, ups)?;
-    }
+    write_batches(wtr, ups)?;
     Ok(())
 }
 
 pub fn encode(fname: &str, symbol: &str, ups: &[Update]) -> Result<(), io::Error> {
     let mut wtr = file_writer(fname, true)?;
-    write_magic_value(&mut wtr)?;
-    write_symbol(&mut wtr, symbol)?;
-    write_metadata(&mut wtr, ups)?;
-    write_main(&mut wtr, ups)?;
+    encode_buffer(&mut wtr, symbol, ups)?;
     wtr.flush()
+}
+
+pub fn encode_buffer<T: Write + Seek>(
+    wtr: &mut T,
+    symbol: &str,
+    ups: &[Update],
+) -> Result<(), io::Error> {
+    if !ups.is_empty() {
+        write_magic_value(wtr)?;
+        write_symbol(wtr, symbol)?;
+        write_metadata(wtr, ups)?;
+        write_main(wtr, ups.iter().peekable())?;
+    }
+    Ok(())
 }
 
 pub fn is_wstf(fname: &str) -> Result<bool, io::Error> {
@@ -463,34 +485,29 @@ pub fn decode_buffer(mut buf: &mut dyn Read) -> Vec<Update> {
     v
 }
 
+#[cfg_attr(feature = "count_alloc", count_alloc)]
 pub fn append(fname: &str, ups: &[Update]) -> Result<(), io::Error> {
-    let (ups, new_max_ts, cur_len) = {
-        let mut rdr = file_reader(fname)?;
-        let _symbol = read_symbol(&mut rdr)?;
+    let mut rdr = file_reader(fname)?;
+    let _symbol = read_symbol(&mut rdr)?;
 
-        let old_max_ts = read_max_ts(&mut rdr)?;
+    let old_max_ts = read_max_ts(&mut rdr)?;
 
-        let ups: Vec<Update> = ups
-            .into_iter()
-            .filter(|up| up.ts > old_max_ts)
-            .cloned()
-            .collect();
-        if ups.is_empty() {
-            return Ok(());
-        }
+    let mut ups = ups.into_iter().filter(|up| up.ts > old_max_ts).peekable();
 
-        let new_min_ts = ups[0].ts;
-        let new_max_ts = ups[ups.len() - 1].ts;
+    if ups.peek().is_none() {
+        return Ok(());
+    }
 
-        if new_min_ts <= old_max_ts {
-            panic!("Cannot append data! (not implemented)");
-        }
+    let new_min_ts = ups.clone().next().unwrap().ts;
+    let new_max_ts = ups.clone().next_back().unwrap().ts;
 
-        let cur_len = read_len(&mut rdr)?;
-        (ups, new_max_ts, cur_len)
-    };
+    if new_min_ts <= old_max_ts {
+        panic!("Cannot append data!(not implemented)");
+    }
 
-    let new_len = cur_len + ups.len() as u64;
+    let cur_len = read_len(&mut rdr)?;
+
+    let new_len = cur_len + ups.clone().count() as u64;
 
     let mut wtr = file_writer(fname, false)?;
     write_len(&mut wtr, new_len)?;
@@ -501,7 +518,7 @@ pub fn append(fname: &str, ups: &[Update]) -> Result<(), io::Error> {
     } else {
         wtr.seek(SeekFrom::End(0)).unwrap();
     }
-    write_batches(&mut wtr, &ups)?;
+    write_batches(&mut wtr, ups.peekable())?;
     wtr.flush().unwrap();
 
     Ok(())
@@ -825,7 +842,7 @@ mod tests {
             size: 0.,
         };
         let mut bytes = vec![];
-        write_batches(&mut bytes, &vec![up]).unwrap();
+        write_batches(&mut bytes, [up].iter().peekable()).unwrap();
         assert_eq!(
             vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             bytes

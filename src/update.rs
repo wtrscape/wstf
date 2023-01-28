@@ -1,7 +1,7 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::cmp::Ordering;
-use std::io::{Cursor, Write};
 use std::io::ErrorKind::InvalidData;
+use std::io::{Cursor, Write};
 
 pub trait UpdateVecConvert {
     fn as_json(&self) -> String;
@@ -74,24 +74,26 @@ impl Update {
         let ts = rdr.read_u64::<BigEndian>()?;
         let seq = rdr.read_u32::<BigEndian>()?;
         let flags = rdr.read_u8()?;
-        let is_trade = (Flags::from_bits(flags).ok_or(InvalidData)? & Flags::FLAG_IS_TRADE).to_bool();
+        let is_trade =
+            (Flags::from_bits(flags).ok_or(InvalidData)? & Flags::FLAG_IS_TRADE).to_bool();
         let is_bid = (Flags::from_bits(flags).ok_or(InvalidData)? & Flags::FLAG_IS_BID).to_bool();
         let price = rdr.read_f32::<BigEndian>()?;
         let size = rdr.read_f32::<BigEndian>()?;
 
         Ok(Update {
-            ts, seq, is_trade, is_bid, price, size,
+            ts,
+            seq,
+            is_trade,
+            is_bid,
+            price,
+            size,
         })
     }
 
-    pub fn serialize(&self, ref_ts: u64, ref_seq: u32) -> Vec<u8> {
+    pub fn serialize_to_buffer(&self, buf: &mut dyn Write, ref_ts: u64, ref_seq: u32) {
         if self.seq < ref_seq {
-            println!("{:?}", ref_seq);
-            println!("{:?}", self);
-            panic!("TODO: ???");
+            panic!("reference seqno is bigger than the current seqno you are trying to encode");
         }
-
-        let mut buf: Vec<u8> = Vec::new();
         let _ = buf.write_u16::<BigEndian>((self.ts - ref_ts) as u16);
         let _ = buf.write_u8((self.seq - ref_seq) as u8);
 
@@ -99,15 +101,13 @@ impl Update {
         if self.is_bid {
             flags |= Flags::FLAG_IS_BID;
         }
-
         if self.is_trade {
             flags |= Flags::FLAG_IS_TRADE;
         }
-
         let _ = buf.write_u8(flags.bits());
+
         let _ = buf.write_f32::<BigEndian>(self.price);
         let _ = buf.write_f32::<BigEndian>(self.size);
-        buf
     }
 
     pub fn as_json(&self) -> String {
