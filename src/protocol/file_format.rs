@@ -125,7 +125,6 @@ pub fn write_batches<U: Deref<Target=Update>, I: Iterator<Item=U>>(mut wtr: &mut
     let mut b = BUF.lock().unwrap();
     let mut c = b.deref_mut().borrow_mut();
     let mut buf = Cursor::new(&mut c[..]);
-    // let mut buf = Vec::new();
     let head = ups.peek().unwrap();
     let mut ref_ts = head.ts;
     let mut ref_seq = head.seq;
