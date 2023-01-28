@@ -1,4 +1,9 @@
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use std::cell::RefCell;
+use std::io::Cursor;
+use std::iter::Peekable;
+use std::ops::DerefMut;
+use std::sync::Mutex;
 use std::{
     cmp, fmt,
     fs::{File, OpenOptions},
@@ -7,11 +12,6 @@ use std::{
     },
     str,
 };
-use std::io::Cursor;
-use std::iter::Peekable;
-use std::sync::Mutex;
-use std::cell::RefCell;
-use std::ops::DerefMut;
 
 use crate::update::*;
 use crate::utils::epoch_to_human;
@@ -117,8 +117,11 @@ fn write_reference(
 }
 
 use std::ops::Deref;
-#[cfg_attr(feature="count_alloc", count_alloc)]
-pub fn write_batches<U: Deref<Target=Update>, I: Iterator<Item=U>>(mut wtr: &mut dyn Write, mut ups: Peekable<I>) -> Result<(), io::Error> {
+#[cfg_attr(feature = "count_alloc", count_alloc)]
+pub fn write_batches<U: Deref<Target = Update>, I: Iterator<Item = U>>(
+    mut wtr: &mut dyn Write,
+    mut ups: Peekable<I>,
+) -> Result<(), io::Error> {
     lazy_static! {
         static ref BUF: Mutex<RefCell<Vec<u8>>> = Mutex::new(RefCell::new(vec![0; 100_000_000]));
     }
@@ -132,13 +135,11 @@ pub fn write_batches<U: Deref<Target=Update>, I: Iterator<Item=U>>(mut wtr: &mut
 
     for elem in ups {
         if count != 0
-            && (
-            elem.ts >= ref_ts + 0xFFFF
+            && (elem.ts >= ref_ts + 0xFFFF
                 || elem.seq >= ref_seq + 0xF
                 || elem.seq < ref_seq
                 || elem.ts < ref_ts
-                || count == 0xFFFF
-        )
+                || count == 0xFFFF)
         {
             write_reference(&mut wtr, ref_ts, ref_seq, count)?;
             let _ = wtr.write(&buf.get_ref()[0..(buf.position() as usize)]);
@@ -158,7 +159,10 @@ pub fn write_batches<U: Deref<Target=Update>, I: Iterator<Item=U>>(mut wtr: &mut
     wtr.write_all(&buf.get_ref()[0..(buf.position() as usize)])
 }
 
-pub fn write_main<'a, D: Deref<Target=Update>, T: Write + Seek, I: Iterator<Item=D>>(wtr: &mut T, ups: Peekable<I>) -> Result<(), io::Error> {
+pub fn write_main<'a, D: Deref<Target = Update>, T: Write + Seek, I: Iterator<Item = D>>(
+    wtr: &mut T,
+    ups: Peekable<I>,
+) -> Result<(), io::Error> {
     wtr.seek(SeekFrom::Start(MAIN_OFFSET))?;
     write_batches(wtr, ups)?;
     Ok(())
@@ -170,7 +174,11 @@ pub fn encode(fname: &str, symbol: &str, ups: &[Update]) -> Result<(), io::Error
     wtr.flush()
 }
 
-pub fn encode_buffer<T: Write + Seek>(wtr: &mut T, symbol: &str, ups: &[Update]) -> Result<(), io::Error> {
+pub fn encode_buffer<T: Write + Seek>(
+    wtr: &mut T,
+    symbol: &str,
+    ups: &[Update],
+) -> Result<(), io::Error> {
     if !ups.is_empty() {
         write_magic_value(wtr)?;
         write_symbol(wtr, symbol)?;
