@@ -1,4 +1,9 @@
+use std::io::{BufWriter, Cursor, Error, Seek, SeekFrom, Write};
+use byteorder::{BigEndian, ReadBytesExt};
 use chrono::{DateTime, NaiveDateTime, Utc};
+use crate::update::Update;
+
+type BookName = arrayvec::ArrayString<64>;
 
 pub fn fill_digits(input: u64) -> u64 {
     let mut ret = input;
@@ -28,6 +33,42 @@ pub fn epoch_to_human(ts: u64) -> String {
     let naive_datetime = NaiveDateTime::from_timestamp_opt(ts as i64, 0).unwrap();
     let datetime_again: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
     format!("{}", datetime_again)
+}
+
+pub fn encode_insert_into(book_name: Option<&str>, update: &Update) -> Result<Vec<u8>, Error> {
+    let mut buf = BufWriter::new(Vec::with_capacity(64*30));
+    buf.write(crate::RAW_INSERT_PREFIX)?;
+    let len = match &book_name {
+        None => 0u64,
+        Some(book_name) => book_name.len() as u64
+    };
+    buf.write(&len.to_be_bytes())?;
+    if let Some(book_name) = book_name {
+        buf.write(book_name.as_bytes())?;
+    }
+    update.serialize_raw_to_buffer(&mut buf)?;
+    buf.write(&[b'\n'])?;
+    Ok(buf.into_inner().unwrap())
+}
+
+pub fn decode_insert_into(buf: &[u8]) -> Option<(Option<Update>, Option<BookName>)> {
+    let mut rdr = Cursor::new(buf);
+    rdr.seek(SeekFrom::Current(crate::RAW_INSERT_PREFIX.len() as i64)).ok()?;
+    let len = rdr.read_u64::<BigEndian>().ok()? as usize;
+    let book_name = if len > 0 {
+        let pos = rdr.position() as usize;
+        let name = unsafe { std::str::from_utf8_unchecked(&rdr.get_ref()[pos..(pos+len)]) };
+        let name = BookName::from(name).ok()?;
+        rdr.set_position((pos + len) as u64);
+        Some(name)
+    } else {
+        None
+    };
+
+    let pos = rdr.position() as usize;
+    let buf = rdr.into_inner();
+    let update = Update::from_raw(&buf[pos..]).ok();
+    Some((update, book_name))
 }
 
 #[cfg(test)]

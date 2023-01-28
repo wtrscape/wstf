@@ -18,19 +18,19 @@ fn key_or_default(key: &str, default: &str) -> String {
     }
 }
 
-fn get_wstfdb_conf_from_env() -> (String, String, usize) {
-    let wstfdb_hostname: String = key_or_default("WSTFDB_HOSTNAME", "localhost");
-    let wstfdb_port: String = key_or_default("WSTFDB_PORT", "9001");
+fn get_wstf_db_conf_from_env() -> (String, String, usize) {
+    let wstf_db_hostname: String = key_or_default("WSTF_DB_HOSTNAME", "localhost");
+    let wstf_db_port: String = key_or_default("WSTF_DB_PORT", "9001");
     let q_capacity: usize = key_or_default("QUEUE_CAPACITY", "70000000")
         .parse()
         .unwrap();
 
-    (wstfdb_hostname, wstfdb_port, q_capacity)
+    (wstf_db_hostname, wstf_db_port, q_capacity)
 }
 
 pub fn get_cxn() -> Cxn {
-    let (wstfdb_hostname, wstfdb_port, _capacity) = get_wstfdb_conf_from_env();
-    match Cxn::new(&wstfdb_hostname, &wstfdb_port) {
+    let (wstf_db_hostname, wstf_db_port, _capacity) = get_wstf_db_conf_from_env();
+    match Cxn::new(&wstf_db_hostname, &wstf_db_port) {
         Ok(cxn) => cxn,
         Err(Error::ConnectionError) => {
             panic!("DB cannot be connected!");
@@ -40,9 +40,9 @@ pub fn get_cxn() -> Cxn {
 }
 
 pub fn get_cxn_pool() -> CxnPool {
-    let (wstfdb_hostname, wstfdb_port, capacity) = get_wstfdb_conf_from_env();
+    let (wstf_db_hostname, wstf_db_port, capacity) = get_wstf_db_conf_from_env();
 
-    match CxnPool::new(1, &wstfdb_hostname, &wstfdb_port, capacity) {
+    match CxnPool::new(1, &wstf_db_hostname, &wstf_db_port, capacity) {
         Ok(pool) => pool,
         Err(Error::ConnectionError) => {
             panic!("Connection Pool cannot be established!");
