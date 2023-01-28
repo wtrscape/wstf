@@ -3,7 +3,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use std::io::{BufWriter, Cursor, Error, Seek, SeekFrom, Write};
 
-type BookName = arrayvec::ArrayString<64>;
+type BookName = arrayvec::ArrayString<[u8; 64]>;
 
 pub fn fill_digits(input: u64) -> u64 {
     let mut ret = input;
