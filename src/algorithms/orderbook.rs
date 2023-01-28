@@ -1,9 +1,9 @@
-use indexmap::IndexMap;
-use std::collections::BTreeMap;
-use std::fmt;
-use std::f64;
 use crate::algorithms::histogram::{BinCount, Histogram};
 use crate::update::Update;
+use indexmap::IndexMap;
+use std::collections::BTreeMap;
+use std::f64;
+use std::fmt;
 
 type Price = u64;
 type Size = f64;
@@ -36,14 +36,19 @@ impl Orderbook {
     pub fn process_update(&mut self, up: &Update) {
         if up.is_trade {
             let p = self.discretize(up.price);
-            let book = if up.is_bid {&mut self.bids} else {&mut self.asks};
-            book.entry(p)
-                .and_modify(|size| {
-                    *size -= up.size as Size
-                });
+            let book = if up.is_bid {
+                &mut self.bids
+            } else {
+                &mut self.asks
+            };
+            book.entry(p).and_modify(|size| *size -= up.size as Size);
         } else {
             let price = self.discretize(up.price);
-            let book = if up.is_bid {&mut self.bids} else {&mut self.asks};
+            let book = if up.is_bid {
+                &mut self.bids
+            } else {
+                &mut self.asks
+            };
             book.insert(price, up.size as Size);
             if book[&price] == 0. {
                 book.remove(&price);
@@ -57,13 +62,17 @@ impl Orderbook {
     }
 
     pub fn clean(&mut self) {
-        self.bids = self.bids.iter()
-            .map(|(&a,&b)| (a,b))
-            .filter(|&(_p,s)|s != 0.)
+        self.bids = self
+            .bids
+            .iter()
+            .map(|(&a, &b)| (a, b))
+            .filter(|&(_p, s)| s != 0.)
             .collect::<BTreeMap<Price, Size>>();
-        self.asks = self.asks.iter()
-            .map(|(&a,&b)| (a,b))
-            .filter(|&(_p,s)|s != 0.)
+        self.asks = self
+            .asks
+            .iter()
+            .map(|(&a, &b)| (a, b))
+            .filter(|&(_p, s)| s != 0.)
             .collect::<BTreeMap<Price, Size>>();
     }
 
@@ -72,10 +81,7 @@ impl Orderbook {
         let ask_min = self.asks.iter().next()?;
         let (bid_p, bid_s) = (self.undiscretize(*bid_max.0), *bid_max.1);
         let (ask_p, ask_s) = (self.undiscretize(*ask_min.0), *ask_min.1);
-        Some((
-            (bid_p, bid_s),
-            (ask_p, ask_s)
-        ))
+        Some(((bid_p, bid_s), (ask_p, ask_s)))
     }
 
     pub fn best_bid_raw(&self) -> Option<u64> {
@@ -143,7 +149,13 @@ pub struct RebinnedOrderbook {
 }
 
 impl RebinnedOrderbook {
-    pub fn from(price_decimals: u8, ups: &[Update], step_bins: BinCount, tick_bins: BinCount, m: f64) -> RebinnedOrderbook {
+    pub fn from(
+        price_decimals: u8,
+        ups: &[Update],
+        step_bins: BinCount,
+        tick_bins: BinCount,
+        m: f64,
+    ) -> RebinnedOrderbook {
         let (price_hist, step_hist) = Histogram::from(&ups, step_bins, tick_bins, m);
         let mut fine_level = Orderbook::with_precision(price_decimals);
         let mut temp_ob = Orderbook::with_precision(price_decimals);
@@ -170,9 +182,9 @@ impl RebinnedOrderbook {
                 } else {
                     &mut fine_level.asks
                 };
-                let fine_size = fine_book.entry(temp_ob.discretize(up.price)).or_insert(
-                    up.size as Size,
-                );
+                let fine_size = fine_book
+                    .entry(temp_ob.discretize(up.price))
+                    .or_insert(up.size as Size);
 
                 let local_side = if up.is_bid {
                     &mut temp_ob.bids
@@ -184,15 +196,12 @@ impl RebinnedOrderbook {
                 if (*fine_size) == up.size as Size {
                     ()
                 } else if (*fine_size) > up.size as Size {
-
                     *coarse_size -= (*fine_size) - up.size as Size;
-                } else
-                {
+                } else {
                     *coarse_size += up.size as Size - *fine_size;
                 }
 
                 *fine_size = up.size as Size;
-
 
                 if *coarse_size < 0. {
                     *coarse_size = 0.;
@@ -256,5 +265,4 @@ mod tests {
             assert!(v.asks.values().len() < tick_bins);
         }
     }
-
 }

@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use std::collections::{BTreeMap, HashMap};
 use crate::algorithms::histogram::{BinCount, Histogram};
-use crate::utils::fill_digits;
 use crate::update::Update;
+use crate::utils::fill_digits;
+use std::collections::{BTreeMap, HashMap};
 
 type Price = u64;
 type Time = u32;
@@ -23,9 +23,9 @@ impl Levels {
             let time = step_hist.to_bin((fill_digits(up.ts) / 1000) as f64);
             match (price, time) {
                 (Some(p), Some(t)) => {
-                    let price_level = map.entry(p.to_bits()).or_insert(
-                        BTreeMap::<Time, Size>::new(),
-                    );
+                    let price_level = map
+                        .entry(p.to_bits())
+                        .or_insert(BTreeMap::<Time, Size>::new());
                     (*price_level).insert(t as Time, up.size);
                 }
                 (None, _) => {
