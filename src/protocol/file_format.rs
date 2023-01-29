@@ -1,3 +1,6 @@
+#[cfg(feature = "count_alloc")]
+use alloc_counter::{count_alloc};
+
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::cell::RefCell;
 use std::io::Cursor;
@@ -206,9 +209,10 @@ pub fn file_reader(fname: &str) -> Result<BufReader<File>, io::Error> {
     let mut rdr = BufReader::new(file);
 
     if !read_magic_value(&mut rdr)? {
-        panic!("MAGIC VALUE INCORRECT");
+        Err(io::Error::new(InvalidData, "magic value incorrect"))
+    } else {
+        Ok(rdr)
     }
-    Ok(rdr)
 }
 
 fn read_symbol<T: BufRead + Seek>(rdr: &mut T) -> Result<String, io::Error> {
@@ -219,7 +223,7 @@ fn read_symbol<T: BufRead + Seek>(rdr: &mut T) -> Result<String, io::Error> {
     Ok(ret)
 }
 
-fn read_len<T: BufRead + Seek>(rdr: &mut T) -> Result<u64, io::Error> {
+fn read_len<T: Read + Seek>(rdr: &mut T) -> Result<u64, io::Error> {
     rdr.seek(SeekFrom::Start(LEN_OFFSET))?;
     rdr.read_u64::<BigEndian>()
 }

@@ -9,7 +9,6 @@ extern crate byteorder;
 extern crate uuid;
 #[macro_use]
 extern crate bitflags;
-#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate lazy_static;
@@ -17,7 +16,6 @@ extern crate lazy_static;
 pub mod algorithms;
 pub mod parser;
 pub mod protocol;
-pub mod storage;
 pub mod update;
 pub mod utils;
 
