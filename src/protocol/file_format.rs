@@ -1,5 +1,5 @@
 #[cfg(feature = "count_alloc")]
-use alloc_counter::{count_alloc};
+use alloc_counter::count_alloc;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::cell::RefCell;
