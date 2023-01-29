@@ -37,6 +37,7 @@ indexmap = "1.9.2"
 libc = "0.2.139"
 log = "0.4.17"
 csv = "1.1.6"
+alloc_counter = { version = "0.0.4", optional = true }
 
 [dependencies.uuid]
 features = ["serde", "v4"]
@@ -44,3 +45,7 @@ version = "1.2.2"
 
 [dev-dependencies]
 serial_test = "1.0.0"
+
+[features]
+default = []
+count_alloc = ["alloc_counter"]
