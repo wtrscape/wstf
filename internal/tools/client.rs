@@ -7,7 +7,7 @@ fn main() {
     let matches = App::new("client")
         .version("0.1.0")
         .author("alxshelepenok <alxshelepenok@gmail.com>")
-        .about("Command line client for WSTF Protocol")
+        .about("Command line client for WSTF protocol")
         .arg(
             Arg::with_name("input")
                 .short("i")
