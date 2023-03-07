@@ -36,7 +36,7 @@ serde_json = "1.0.94"
 indexmap = "1.9.2"
 libc = "0.2.139"
 log = "0.4.17"
-csv = "1.2.0"
+csv = "1.2.1"
 alloc_counter = { version = "0.0.4", optional = true }
 
 [dependencies.uuid]
