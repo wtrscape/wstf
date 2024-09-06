@@ -3,15 +3,16 @@
 use crate::algorithms::histogram::{BinCount, Histogram};
 use crate::update::Update;
 use crate::utils::fill_digits;
+use ordered_float::OrderedFloat;
 use std::collections::{BTreeMap, HashMap};
 
-type Price = u64;
 type Time = u32;
+type Price = f64;
 type Size = f32;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Levels {
-    levels: HashMap<Price, BTreeMap<Time, Size>>,
+    levels: HashMap<OrderedFloat<Price>, BTreeMap<Time, Size>>,
 }
 
 impl Levels {
@@ -24,7 +25,7 @@ impl Levels {
             match (price, time) {
                 (Some(p), Some(t)) => {
                     let price_level = map
-                        .entry(p.to_bits())
+                        .entry(OrderedFloat(p))
                         .or_insert(BTreeMap::<Time, Size>::new());
                     (*price_level).insert(t as Time, up.size);
                 }

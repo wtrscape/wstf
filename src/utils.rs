@@ -1,6 +1,6 @@
 use crate::update::Update;
 use byteorder::{BigEndian, ReadBytesExt};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use std::io::{BufWriter, Cursor, Error, Seek, SeekFrom, Write};
 
 type BookName = arrayvec::ArrayString<64>;
@@ -30,8 +30,8 @@ pub fn within_range(target_min: u64, target_max: u64, file_min: u64, file_max: u
 }
 
 pub fn epoch_to_human(ts: u64) -> String {
-    let naive_datetime = NaiveDateTime::from_timestamp_opt(ts as i64, 0).unwrap();
-    let datetime_again: DateTime<Utc> = DateTime::from_utc(naive_datetime, Utc);
+    let naive_datetime = DateTime::from_timestamp(ts as i64, 0).unwrap();
+    let datetime_again = Utc.from_utc_datetime(&naive_datetime.naive_utc());
     format!("{}", datetime_again)
 }
 

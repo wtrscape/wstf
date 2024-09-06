@@ -7,6 +7,7 @@ use std::io::Cursor;
 use std::iter::Peekable;
 use std::ops::DerefMut;
 use std::sync::Mutex;
+use std::ops::Deref;
 use std::{
     cmp, fmt,
     fs::{File, OpenOptions},
@@ -25,6 +26,7 @@ static SYMBOL_OFFSET: u64 = 5;
 static LEN_OFFSET: u64 = 25;
 static MAX_TS_OFFSET: u64 = 33;
 static MAIN_OFFSET: u64 = 80;
+static BYTES_PER_ROW: usize = 12;
 
 #[derive(Debug, Eq, PartialEq, PartialOrd)]
 pub struct Metadata {
@@ -119,7 +121,6 @@ fn write_reference(
     wtr.write_u16::<BigEndian>(len)
 }
 
-use std::ops::Deref;
 #[cfg_attr(feature = "count_alloc", count_alloc)]
 pub fn write_batches<U: Deref<Target = Update>, I: Iterator<Item = U>>(
     mut wtr: &mut dyn Write,
@@ -242,81 +243,81 @@ pub fn get_range_in_file(fname: &str, min_ts: u64, max_ts: u64) -> Result<Vec<Up
     range(&mut rdr, min_ts, max_ts)
 }
 
-pub fn range<T: BufRead + Seek>(
-    rdr: &mut T,
-    min_ts: u64,
-    max_ts: u64,
-) -> Result<Vec<Update>, io::Error> {
-    if min_ts > max_ts {
-        return Ok(vec![]);
-    }
-    rdr.seek(SeekFrom::Start(MAIN_OFFSET)).expect("SEEKING");
-    let mut v: Vec<Update> = vec![];
+pub fn range<T: Read + Seek>(rdr: &mut T, min_ts: u64, max_ts: u64) -> Result<Vec<Update>, io::Error> {
+    let mut v: Vec<Update> = Vec::with_capacity(2048);
+    range_for_each(rdr, min_ts, max_ts, &mut |up| {v.push(*up)})?;
+    Ok(v)
+}
 
+fn range_for_each<T: Read + Seek, F: for<'a> FnMut(&'a Update)>(rdr: &mut T, min_ts: u64, max_ts: u64, f: &mut F) -> Result<(), io::Error> {
+    if min_ts > max_ts {
+        return Ok(());
+    }
+    
+    rdr.seek(SeekFrom::Start(MAIN_OFFSET)).expect("SEEKING");
+    
     loop {
         match rdr.read_u8() {
             Ok(byte) => {
                 if byte != 0x1 {
-                    return Ok(v);
+                    return Ok(());
                 }
             }
             Err(_e) => {
-                return Ok(v);
+                return Ok(());
             }
         };
 
         let current_meta = read_one_batch_meta(rdr);
         let current_ref_ts = current_meta.ref_ts;
-        let current_count = current_meta.count;
 
-        let bytes_to_skip = current_count * 12;
-        rdr.seek(SeekFrom::Current(bytes_to_skip as i64))
-            .expect(&format!("Skipping {} rows", current_count));
+        let bytes_to_skip = current_meta.count as usize * BYTES_PER_ROW;
+        rdr.seek(SeekFrom::Current(bytes_to_skip as i64)).expect(
+            &format!(
+                "Skipping {} rows",
+                current_meta.count
+            ),
+        );
 
         match rdr.read_u8() {
             Ok(byte) => {
                 if byte != 0x1 {
-                    return Ok(v);
+                    return Ok(());
                 }
             }
             Err(_e) => {
-                return Ok(v);
+                return Ok(());
             }
         };
         let next_meta = read_one_batch_meta(rdr);
         let next_ref_ts = next_meta.ref_ts;
-
+        
         if min_ts <= current_ref_ts && max_ts <= current_ref_ts {
-            return Ok(v);
+            return Ok(());
         } else if (min_ts <= current_ref_ts && max_ts <= next_ref_ts)
             || (min_ts < next_ref_ts && max_ts >= next_ref_ts)
             || (min_ts > current_ref_ts && max_ts < next_ref_ts)
         {
-            let bytes_to_scrollback = -(bytes_to_skip as i64) - 14 - 1;
-            rdr.seek(SeekFrom::Current(bytes_to_scrollback))
-                .expect("scrolling back");
-            let filtered = {
-                let batch = read_one_batch_main(rdr, current_meta)?;
-                if min_ts <= current_ref_ts && max_ts >= next_ref_ts {
-                    batch
-                } else {
-                    batch
-                        .into_iter()
-                        .filter(|up| up.ts <= max_ts && up.ts >= min_ts)
-                        .collect::<Vec<Update>>()
-                }
-            };
-            v.extend(filtered);
-        } else if min_ts >= next_ref_ts {
-            let bytes_to_scrollback = -14 - 1;
-            rdr.seek(SeekFrom::Current(bytes_to_scrollback))
-                .expect("SKIPPING n ROWS");
-        } else {
-            println!(
-                "{}, {}, {}, {}",
-                min_ts, max_ts, current_ref_ts, next_ref_ts
+            let bytes_to_scrollback = - (bytes_to_skip as i64) - 14 - 1;
+            rdr.seek(SeekFrom::Current(bytes_to_scrollback)).expect(
+                "scrolling back",
             );
-            panic!("Should have covered all the cases.");
+            if min_ts <= current_ref_ts && max_ts >= next_ref_ts {
+                read_one_batch_main_for_each(rdr, current_meta, f)?;
+            } else {
+                read_one_batch_main_for_each(rdr, current_meta, &mut |up| {
+                    if up.ts <= max_ts && up.ts >= min_ts {
+                        f(up);
+                    }
+                })?;
+            }
+        } else if min_ts >= next_ref_ts {
+            let bytes_to_scrollback = - 14 - 1;
+            rdr.seek(SeekFrom::Current(bytes_to_scrollback)).expect(
+                "SKIPPING n ROWS",
+            );
+        } else {
+            panic!("{}, {}, {}, {}..... Should have covered all the cases.", min_ts, max_ts, current_ref_ts, next_ref_ts);
         }
     }
 }
@@ -331,6 +332,16 @@ pub fn read_one_batch(rdr: &mut impl Read) -> Result<Vec<Update>, io::Error> {
     }
 }
 
+pub fn read_one_batch_for_each<R: Read + Seek, F: for<'a> FnMut(&'a Update)>(rdr: &mut R, f: &mut F) -> Result<(), io::Error> {
+    let is_ref = rdr.read_u8()? == 0x1;
+    if !is_ref {
+        Ok(())
+    } else {
+        let meta = read_one_batch_meta(rdr);
+        read_one_batch_main_for_each(rdr, meta, f)
+    }
+}
+
 pub fn read_one_batch_meta(rdr: &mut impl Read) -> BatchMetadata {
     let ref_ts = rdr.read_u64::<BigEndian>().unwrap();
     let ref_seq = rdr.read_u32::<BigEndian>().unwrap();
@@ -341,6 +352,14 @@ pub fn read_one_batch_meta(rdr: &mut impl Read) -> BatchMetadata {
         ref_seq,
         count,
     }
+}
+
+fn read_one_batch_main_for_each<R: Read + Seek, F: for<'a> FnMut(&'a Update)>(rdr: &mut R, meta: BatchMetadata, f: &mut F) -> Result<(), io::Error> {
+    for _i in 0..meta.count {
+        let up = read_one_update(rdr, &meta)?;
+        f(&up);
+    }
+    Ok(())
 }
 
 fn read_one_batch_main(rdr: &mut impl Read, meta: BatchMetadata) -> Result<Vec<Update>, io::Error> {
@@ -469,6 +488,34 @@ fn read_all<T: BufRead + Seek>(mut rdr: &mut T) -> Result<Vec<Update>, io::Error
     Ok(v)
 }
 
+fn read_all_for_each<T: Read + Seek, F: for<'a> FnMut(&'a Update)>(mut rdr: &mut T, f: &mut F) -> Result<(), io::Error> {
+    rdr.seek(SeekFrom::Start(MAIN_OFFSET)).expect("SEEKING");
+    while let Ok(is_ref) = rdr.read_u8() {
+        if is_ref == 0x1 {
+            rdr.seek(SeekFrom::Current(-1)).expect("ROLLBACK ONE BYTE");
+            read_one_batch_for_each(&mut rdr, f)?;
+        }
+    }
+    Ok(())
+}
+
+fn read_n_batches_for_each<T: Read + Seek, F: for<'a> FnMut(&'a Update)>(mut rdr: &mut T, num_rows: u32, f: &mut F) -> Result<(), io::Error> {
+    rdr.seek(SeekFrom::Start(MAIN_OFFSET)).expect("SEEKING");
+    let mut count = 0;
+    if num_rows == 0 { return Ok(()); }
+    while let Ok(is_ref) = rdr.read_u8() {
+        if is_ref == 0x1 {
+            rdr.seek(SeekFrom::Current(-1)).expect("ROLLBACK ONE BYTE");
+            read_one_batch_for_each(&mut rdr, f)?;
+        }
+        count += 1;
+        if count > num_rows {
+            break;
+        }
+    }
+    Ok(())
+}
+
 pub fn decode(fname: &str, num_rows: Option<u32>) -> Result<Vec<Update>, io::Error> {
     let mut rdr = file_reader(fname)?;
     rdr.seek(SeekFrom::Start(MAIN_OFFSET)).expect("SEEKING");
@@ -476,6 +523,14 @@ pub fn decode(fname: &str, num_rows: Option<u32>) -> Result<Vec<Update>, io::Err
     match num_rows {
         Some(num_rows) => read_n_batches(&mut rdr, num_rows),
         None => read_all(&mut rdr),
+    }
+}
+
+pub fn decode_for_each<F: for<'a> FnMut(&'a Update)>(fname: &str, num_rows: Option<u32>, f: &mut F) -> Result<(), io::Error> {
+    let mut rdr = file_reader(fname)?;
+    match num_rows {
+        Some(num_rows) => read_n_batches_for_each(&mut rdr, num_rows, f),
+        None => read_all_for_each(&mut rdr, f),
     }
 }
 
