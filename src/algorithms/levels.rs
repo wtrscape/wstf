@@ -4,7 +4,8 @@ use crate::algorithms::histogram::{BinCount, Histogram};
 use crate::update::Update;
 use crate::utils::fill_digits;
 use ordered_float::OrderedFloat;
-use std::collections::{BTreeMap, HashMap};
+use rustc_hash::FxHashMap;
+use std::collections::BTreeMap;
 
 type Time = u32;
 type Price = f64;
@@ -12,13 +13,13 @@ type Size = f32;
 
 #[derive(Debug, Serialize)]
 pub struct Levels {
-    levels: HashMap<OrderedFloat<Price>, BTreeMap<Time, Size>>,
+    levels: FxHashMap<OrderedFloat<Price>, BTreeMap<Time, Size>>,
 }
 
 impl Levels {
     pub fn from(ups: &[Update], step_bins: BinCount, tick_bins: BinCount, m: f64) -> Levels {
         let (price_hist, step_hist) = Histogram::from(&ups, step_bins, tick_bins, m);
-        let mut map = HashMap::new();
+        let mut map = FxHashMap::default();
         for up in ups.iter() {
             let price = price_hist.to_bin(up.price as f64);
             let time = step_hist.to_bin((fill_digits(up.ts) / 1000) as f64);

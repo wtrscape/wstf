@@ -2,8 +2,8 @@
 
 use crate::update::Update;
 use crate::utils::{bigram, fill_digits};
+use rustc_hash::FxHashMap;
 use std::cmp::Ordering::{self, Equal, Greater, Less};
-use std::collections::HashMap;
 use std::mem;
 
 type Price = f64;
@@ -13,7 +13,7 @@ pub type BinCount = usize;
 pub struct Histogram {
     pub(crate) bins: Option<Vec<BinCount>>,
     pub boundaries: Vec<Price>,
-    boundary2idx: HashMap<u64, usize>,
+    boundary2idx: FxHashMap<u64, usize>,
     cached_bigram: Vec<(f64, f64)>,
 }
 
@@ -37,7 +37,7 @@ impl Histogram {
         let bucket_size = (max_ts - min_ts) / ((step_bins - 1) as u64);
         let mut boundaries = vec![];
 
-        let mut lookup_table = HashMap::new();
+        let mut lookup_table = FxHashMap::default();
         for i in 0..step_bins {
             let boundary = (min_ts + (i as u64) * bucket_size) as f64;
             boundaries.push(boundary);
@@ -122,7 +122,7 @@ fn build_histogram(filtered_vals: Vec<Price>, bin_count: BinCount) -> Histogram 
     }
 
     let mut boundaries = vec![];
-    let mut lookup_table = HashMap::new();
+    let mut lookup_table = FxHashMap::default();
     for i in 0..bin_count {
         let boundary = min + i as f64 * bucket_size;
         boundaries.push(boundary);
@@ -202,7 +202,7 @@ impl Stats for [f64] {
     }
 
     fn median(&self) -> f64 {
-        self.percentile(50 as f64)
+        self.percentile(50f64)
     }
 
     fn var(&self) -> f64 {
@@ -225,7 +225,7 @@ impl Stats for [f64] {
     }
 
     fn std_dev_pct(&self) -> f64 {
-        let hundred = 100 as f64;
+        let hundred = 100f64;
         (self.std_dev() / self.mean()) * hundred
     }
 
@@ -237,7 +237,7 @@ impl Stats for [f64] {
     }
 
     fn median_abs_dev_pct(&self) -> f64 {
-        let hundred = 100 as f64;
+        let hundred = 100f64;
         (self.median_abs_dev() / self.median()) * hundred
     }
 
@@ -270,6 +270,7 @@ fn percentile_of_sorted(sorted_samples: &[f64], pct: f64) -> f64 {
     if sorted_samples.len() == 1 {
         return sorted_samples[0];
     }
+
     let zero: f64 = 0.0;
     debug_assert!(zero <= pct);
     let hundred = 100f64;
@@ -312,7 +313,7 @@ mod tests {
 
     static FNAME: &str = "./internal/mocks/data.wstf";
 
-    use std::collections::HashMap;
+    use rustc_hash::FxHashMap;
 
     #[test]
     fn test_histogram() {
@@ -329,7 +330,7 @@ mod tests {
         let max_ts = 10_000;
         let bucket_size = (max_ts - min_ts) / (step_bins as u64 - 1);
         let mut boundaries = vec![];
-        let mut boundary2idx = HashMap::new();
+        let mut boundary2idx = FxHashMap::default();
         for i in 0..step_bins {
             let boundary = min_ts as f64 + i as f64 * bucket_size as f64;
             boundaries.push(boundary);
@@ -345,7 +346,7 @@ mod tests {
             cached_bigram,
         };
 
-        assert_eq!(step_hist.boundaries.len(), step_bins as usize);
+        assert_eq!(step_hist.boundaries.len(), step_bins);
         for i in min_ts..max_ts {
             assert_eq!(Some((i / 1000 * 1000) as f64), step_hist.to_bin(i as f64));
         }

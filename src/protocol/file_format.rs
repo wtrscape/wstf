@@ -291,13 +291,22 @@ fn range_for_each<T: Read + Seek, F: for<'a> FnMut(&'a Update)>(
                 }
             }
             Err(_e) => {
+                rdr.seek(SeekFrom::Current(-(bytes_to_skip as i64)))
+                    .expect("scrolling back");
+                read_one_batch_main_for_each(rdr, current_meta, &mut |up| {
+                    if up.ts <= max_ts && up.ts >= min_ts {
+                        f(up);
+                    }
+                })?;
+
                 return Ok(());
             }
         };
+
         let next_meta = read_one_batch_meta(rdr);
         let next_ref_ts = next_meta.ref_ts;
 
-        if min_ts <= current_ref_ts && max_ts <= current_ref_ts {
+        if min_ts < current_ref_ts && max_ts < current_ref_ts {
             return Ok(());
         } else if (min_ts <= current_ref_ts && max_ts <= next_ref_ts)
             || (min_ts < next_ref_ts && max_ts >= next_ref_ts)
@@ -618,6 +627,19 @@ mod tests {
     static FNAME: &str = "./internal/mocks/tmp.wstf";
     static FNAME_DATA: &str = "./internal/mocks/data.wstf";
 
+    fn prepare_data_range(n: u64, with_seq: bool) -> Vec<Update> {
+        (1..n)
+            .map(|i| Update {
+                ts: i * 1000u64,
+                seq: if with_seq { i as u32 } else { 0 },
+                price: 0f32,
+                size: 0f32,
+                is_bid: false,
+                is_trade: false,
+            })
+            .collect::<Vec<Update>>()
+    }
+
     #[cfg(test)]
     fn sample_data() -> Vec<Update> {
         let mut ts: Vec<Update> = vec![];
@@ -746,70 +768,176 @@ mod tests {
 
     #[test]
     #[serial]
-    fn should_return_the_correct_range() {
-        {
-            let ups = (1..50)
-                .map(|i| Update {
-                    ts: i * 1000 as u64,
-                    seq: i as u32,
-                    price: 0.,
-                    size: 0.,
-                    is_bid: false,
-                    is_trade: false,
-                })
-                .collect::<Vec<Update>>();
-
-            encode(FNAME, "BTC_USDT", &ups).unwrap();
-        }
+    fn range_for_each_should_return_correct_updates_within_range() {
+        let updates = prepare_data_range(50, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
 
         let mut rdr = file_reader(FNAME).unwrap();
-        let should_be = (10..21)
+        let mut result = vec![];
+        range_for_each(&mut rdr, 10000, 20000, &mut |up| result.push(*up)).unwrap();
+
+        let expected = (10..21)
             .map(|i| Update {
-                ts: i * 1000 as u64,
+                ts: i * 1000u64,
                 seq: i as u32,
-                price: 0.,
-                size: 0.,
+                price: 0f32,
+                size: 0f32,
                 is_bid: false,
                 is_trade: false,
             })
             .collect::<Vec<Update>>();
-        assert_eq!(should_be, range(&mut rdr, 10000, 20000).unwrap());
+
+        assert_eq!(result, expected);
     }
 
     #[test]
     #[serial]
-    fn should_return_the_correct_range_2() {
-        {
-            let ups = (1..1000)
-                .map(|i| Update {
-                    ts: i * 1000 as u64,
-                    seq: i as u32 % 500 * 500,
-                    price: 0.,
-                    size: 0.,
-                    is_bid: false,
-                    is_trade: false,
-                })
-                .collect::<Vec<Update>>();
-
-            encode(FNAME, "BTC_USDT", &ups).unwrap();
-        }
+    fn range_for_each_should_return_correct_updates_within_range_without_seq() {
+        let updates = prepare_data_range(50, false);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
 
         let mut rdr = file_reader(FNAME).unwrap();
-        assert_eq!(
-            (1..999)
-                .map(|i| {
-                    Update {
-                        ts: i * 1000 as u64,
-                        seq: i as u32 % 500 * 500,
-                        price: 0.,
-                        size: 0.,
-                        is_bid: false,
-                        is_trade: false,
-                    }
-                })
-                .collect::<Vec<Update>>(),
-            range(&mut rdr, 1000, 999000).unwrap()
-        );
+        let mut result = vec![];
+        range_for_each(&mut rdr, 10000, 20000, &mut |up| result.push(*up)).unwrap();
+
+        let expected = (10..21)
+            .map(|i| Update {
+                ts: i * 1000u64,
+                seq: 0,
+                price: 0f32,
+                size: 0f32,
+                is_bid: false,
+                is_trade: false,
+            })
+            .collect::<Vec<Update>>();
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_return_all_updates() {
+        let updates = prepare_data_range(50, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 0, 50 * 1000, &mut |up| result.push(*up)).unwrap();
+
+        assert_eq!(result, updates);
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_return_all_updates_large() {
+        let updates = prepare_data_range(5000, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 0, 5000 * 1000, &mut |up| result.push(*up)).unwrap();
+
+        assert_eq!(result, updates);
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_return_all_updates_without_seq() {
+        let updates = prepare_data_range(50, false);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 0, 50 * 1000, &mut |up| result.push(*up)).unwrap();
+
+        assert_eq!(result, updates);
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_return_all_updates_without_seq_large() {
+        let updates = prepare_data_range(5000, false);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 0, 5000 * 1000, &mut |up| result.push(*up)).unwrap();
+
+        assert_eq!(result, updates);
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_handle_empty_range() {
+        let updates = prepare_data_range(50, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 50000, 60000, &mut |up| result.push(*up)).unwrap();
+
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_handle_single_update_in_range() {
+        let updates = prepare_data_range(50, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 1000, 1000, &mut |up| result.push(*up)).unwrap();
+
+        let expected = vec![Update {
+            seq: 1,
+            ts: 1000,
+            price: 0f32,
+            size: 0f32,
+            is_bid: false,
+            is_trade: false,
+        }];
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_handle_single_update_out_of_range() {
+        let updates = prepare_data_range(50, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 100000, 200000, &mut |up| result.push(*up)).unwrap();
+
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_handle_min_ts_greater_than_max_ts() {
+        let updates = prepare_data_range(50, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 20000, 10000, &mut |up| result.push(*up)).unwrap();
+
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    #[serial]
+    fn range_for_each_should_handle_min_ts_greater_than_max_ts_and_empty_range() {
+        let updates = prepare_data_range(50, true);
+        encode(FNAME, "BTC_USDT", &updates).unwrap();
+
+        let mut rdr = file_reader(FNAME).unwrap();
+        let mut result = vec![];
+        range_for_each(&mut rdr, 20000, 10000, &mut |up| result.push(*up)).unwrap();
+
+        assert!(result.is_empty());
     }
 
     #[test]
@@ -923,8 +1051,8 @@ mod tests {
             seq: 0,
             is_trade: false,
             is_bid: false,
-            price: 0.,
-            size: 0.,
+            price: 0f32,
+            size: 0f32,
         };
         let mut bytes = vec![];
         write_batches(&mut bytes, [up].iter().peekable()).unwrap();

@@ -61,6 +61,15 @@ fn main() {
                 .long("csv")
                 .help("output csv (default is JSON)"),
         )
+        .arg(
+            Arg::with_name("output")
+                .short("o")
+                .long("output")
+                .value_name("OUTPUT")
+                .help("Output file")
+                .required(false)
+                .takes_value(true),
+        )
         .get_matches();
 
     let input = matches.value_of("input").unwrap_or("");
@@ -108,5 +117,11 @@ fn main() {
         }
     };
 
-    println!("{}", txt);
+    let output = matches.value_of("output").unwrap_or("");
+
+    if output != "" {
+        std::fs::write(output, txt).unwrap();
+    } else {
+        println!("{}", txt);
+    }
 }
